@@ -90,8 +90,22 @@ def normalize_lazada_url(url: str, _already_resolved: bool = False) -> str:
     raise UrlNormalizeError("Không nhận diện được định dạng link Lazada này.")
 
 
-# Regex bắt mọi URL http/https xuất hiện trong 1 tin nhắn (để xử lý nhiều link 1 lúc)
-URL_IN_TEXT_RE = re.compile(r"https?://[^\s]+")
+# Regex bắt URL trong 1 tin nhắn, gồm 2 dạng:
+#   1. URL đầy đủ có "http(s)://" ở đầu (như trước giờ).
+#   2. Domain lazada.vn viết tắt, KHÔNG có "http(s)://" phía trước (ví dụ:
+#      "s.lazada.vn/s.NpscL") - rất hay gặp khi copy-paste nhanh vào tin
+#      nhắn quảng cáo. normalize_lazada_url() bên trên vốn đã tự thêm
+#      "https://" khi thiếu scheme, nên chỉ cần regex này nhận diện đúng
+#      VỊ TRÍ của link trong tin nhắn là đủ, không cần sửa gì thêm.
+# Dùng 1 regex hợp nhất (thay vì 2 regex tách rời rồi gộp kết quả) để tránh
+# bắt trùng lặp phần "lazada.vn/..." nằm bên trong 1 URL đã có "http(s)://"
+# ở đầu (vd: không bắt riêng "s.lazada.vn/l.ZC6mR" trong
+# "https://s.lazada.vn/l.ZC6mR" nữa).
+URL_IN_TEXT_RE = re.compile(
+    r"https?://\S+"
+    r"|(?<![\w.])(?:[a-zA-Z0-9-]+\.)*lazada\.vn/\S+",
+    re.IGNORECASE,
+)
 
 
 def extract_urls(text: str) -> list[str]:
