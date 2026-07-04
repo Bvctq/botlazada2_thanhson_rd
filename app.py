@@ -65,7 +65,7 @@ app = Flask(__name__)
 HELP_TEXT = f"""Bot tao affiliate shortlink Lazada.
 
 Cach dung:
-- Gui 1 hoac nhieu link san pham/trang Lazada (moi link 1 dong hoac cach nhau boi khoang trang), bot se tu nhan dien, tao shortlink cho tung link, roi tra loi lai dung noi dung tin nhan ban gui nhung da thay link cu bang shortlink moi (giu nguyen chu, emoji, xuong dong...) de ban copy dang di ngay.
+- Gui 1 hoac nhieu link san pham/trang Lazada (moi link 1 dong hoac cach nhau boi khoang trang), bot se tu nhan dien va tao shortlink cho tung link.
 - Ho tro: link s.lazada.vn, link .../products/pdp-..., link pages.lazada.vn (se tu bo tham so tracking rac).
 
 Lenh:
@@ -98,31 +98,6 @@ def _handle_single_link(original_url: str, sub_id1="", sub_id2="", sub_id3="") -
         return _format_result_line(original_url, source_url, shortlink=shortlink)
     except LazadaApiError as e:
         return _format_result_line(original_url, source_url, error=str(e))
-
-
-def _resolve_link_for_replacement(original_url: str):
-    """
-    Xu ly 1 link tim thay trong tin nhan thuong (khac /link) - dung cho che
-    do "thay the ngay trong tin nhan goc" thay vi tra ve danh sach ket qua
-    rieng.
-
-    Tra ve (text_thay_the, loi):
-    - Thanh cong: text_thay_the la shortlink moi, loi la None.
-    - That bai: text_thay_the la CHINH original_url (giu nguyen trong tin
-      nhan chinh de khong lam sai lech noi dung goc), loi la 1 dong mo ta -
-      se duoc gom lai va bao rieng cho nguoi dung o 1 tin nhan phu, khong
-      chen vao giua tin nhan chinh de ban con copy nguyen tin nhan chinh di
-      dang duoc.
-    """
-    try:
-        source_url = normalize_lazada_url(original_url)
-    except UrlNormalizeError as e:
-        return original_url, f"{original_url}\n   -> {e}"
-    try:
-        shortlink = lazada.create_shortlink(MASTER_LINK, source_url)
-        return shortlink, None
-    except LazadaApiError as e:
-        return original_url, f"{original_url}\n   -> {e}"
 
 
 def _cmd_setsession(chat_id: int, payload: str) -> None:
@@ -213,23 +188,12 @@ def process_message(chat_id: int, user_id: int, text: str) -> None:
         )
         return
 
-    reply_text = text
-    errors = []
+    results = []
     for i, url in enumerate(urls):
         if i > 0:
             time.sleep(CALL_DELAY_SECONDS)
-        replacement, error = _resolve_link_for_replacement(url)
-        reply_text = reply_text.replace(url, replacement, 1)
-        if error:
-            errors.append(error)
-
-    tg.send_message(chat_id, reply_text)
-    if errors:
-        tg.send_message(
-            chat_id,
-            "Luu y - cac link sau CHUA tao duoc shortlink (da giu nguyen "
-            "link cu trong tin nhan ben tren):\n\n" + "\n\n".join(errors),
-        )
+        results.append(_handle_single_link(url))
+    tg.send_message(chat_id, "\n\n".join(results))
 
 
 @app.route(f"/webhook/{WEBHOOK_SECRET}", methods=["POST"])
