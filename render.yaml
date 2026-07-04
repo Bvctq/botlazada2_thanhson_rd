@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: lazada-affiliate-bot
+    runtime: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 30"
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_WEBHOOK_SECRET
+        generateValue: true
+      - key: LAZADA_MASTER_LINK
+        sync: false
+      - key: ALLOWED_USER_IDS
+        sync: false
+      - key: LAZADA_APP_KEY
+        value: "24677475"
+      - key: LAZADA_COOKIE
+        sync: false
+      - key: CALL_DELAY_SECONDS
+        value: "0.6"
